@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kiosco de Rosi</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fff8f0; --primary: #ff5722; --primary-dark: #e64a19;
+    --accent: #ffd600; --card-bg: #ffffff; --text: #1a1a2e;
+    --text-muted: #888; --radius: 20px; --shadow: 0 8px 32px rgba(255,87,34,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+  header { background: linear-gradient(135deg,var(--primary),#ff8a50); padding: 18px 24px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px rgba(255,87,34,0.25); position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Baloo 2', cursive; font-size: 26px; font-weight: 800; color: #fff; }
+  .logo span { color: var(--accent); }
+  .cart-btn { background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 50px; color: #fff; font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; padding: 8px 18px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .cart-btn:active { transform: scale(0.95); }
+  .cart-count { background: var(--accent); color: var(--primary-dark); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+
+  .categories { display: flex; gap: 10px; padding: 16px 20px 8px; overflow-x: auto; scrollbar-width: none; }
+  .categories::-webkit-scrollbar { display: none; }
+  .cat-btn { background: var(--card-bg); border: 2.5px solid #eee; border-radius: 50px; padding: 9px 18px; font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: all .2s; display: flex; align-items: center; gap: 7px; }
+  .cat-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 4px 14px rgba(255,87,34,0.3); }
+  .cat-btn:active { transform: scale(0.95); }
+
+  .menu-section { padding: 10px 16px 100px; }
+  .section-title { font-family: 'Baloo 2', cursive; font-size: 20px; font-weight: 800; color: var(--text); margin: 8px 0 14px; }
+  .products-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(155px,1fr)); gap: 14px; }
+
+  .product-card { background: var(--card-bg); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: transform .18s; border: 2px solid transparent; position: relative; }
+  .product-card:active { transform: scale(0.96); }
+  .product-card.in-cart { border-color: var(--primary); }
+  .product-img { height: 110px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#fff5f0,#fff9f5); overflow: hidden; }
+  .product-img img { width: 100%; height: 100%; object-fit: cover; }
+  .product-img .emoji-fallback { font-size: 52px; }
+  .product-info { padding: 10px 12px 12px; }
+  .product-name { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; margin-bottom: 6px; }
+  .product-price { font-family: 'Baloo 2', cursive; font-size: 17px; font-weight: 800; color: var(--primary); }
+  .add-btn { position: absolute; bottom: 10px; right: 10px; background: var(--primary); color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 10px rgba(255,87,34,0.35); transition: all .15s; }
+  .add-btn:active { transform: scale(0.88); }
+  .qty-badge { position: absolute; top: 8px; right: 8px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 800; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+
+  /* Loading */
+  .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 14px; color: var(--text-muted); }
+  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,87,34,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .empty-menu { text-align: center; padding: 50px 20px; color: var(--text-muted); font-size: 15px; font-weight: 700; }
+
+  /* CART */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; backdrop-filter: blur(3px); }
+  .overlay.show { display: block; }
+  .cart-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 28px 28px 0 0; padding: 0 0 30px; z-index: 300; transform: translateY(100%); transition: transform .32s cubic-bezier(.4,0,.2,1); max-height: 85vh; display: flex; flex-direction: column; }
+  .cart-panel.show { transform: translateY(0); }
+  .cart-handle { width: 42px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 14px auto 0; }
+  .cart-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px 12px; border-bottom: 1.5px solid #f5f5f5; }
+  .cart-title { font-family: 'Baloo 2', cursive; font-size: 22px; font-weight: 800; color: var(--text); }
+  .close-btn { background: #f5f5f5; border: none; border-radius: 50%; width: 34px; height: 34px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .cart-items { overflow-y: auto; flex: 1; padding: 8px 0; }
+  .cart-item { display: flex; align-items: center; padding: 12px 22px; gap: 12px; border-bottom: 1px solid #fafafa; }
+  .cart-item-thumb { width: 42px; height: 42px; border-radius: 10px; overflow: hidden; background: #f5f5f5; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .cart-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .cart-item-info { flex: 1; }
+  .cart-item-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .cart-item-price { font-size: 13px; color: var(--primary); font-weight: 700; }
+  .qty-controls { display: flex; align-items: center; gap: 8px; }
+  .qty-btn { background: #f5f5f5; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text); transition: all .15s; }
+  .qty-btn:active { transform: scale(0.88); background: var(--primary); color: #fff; }
+  .qty-num { font-weight: 800; font-size: 15px; min-width: 20px; text-align: center; }
+  .empty-cart { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .empty-cart .empty-emoji { font-size: 60px; margin-bottom: 12px; }
+  .empty-cart p { font-size: 16px; font-weight: 700; }
+  .cart-footer { padding: 14px 22px 0; border-top: 1.5px solid #f0f0f0; }
+  .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .total-label { font-size: 15px; font-weight: 700; color: var(--text-muted); }
+  .total-amount { font-family: 'Baloo 2', cursive; font-size: 26px; font-weight: 800; color: var(--primary); }
+  .checkout-btn { width: 100%; background: linear-gradient(135deg,var(--primary),#ff8a50); color: #fff; border: none; border-radius: 16px; padding: 17px; font-family: 'Baloo 2', cursive; font-size: 19px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px rgba(255,87,34,0.35); transition: all .2s; }
+  .checkout-btn:active { transform: scale(0.97); }
+  .checkout-btn:disabled { opacity: 0.5; pointer-events: none; }
+
+  /* SUMMARY */
+  .summary-screen { display: none; position: fixed; inset: 0; background: #fff; z-index: 500; flex-direction: column; overflow-y: auto; }
+  .summary-screen.show { display: flex; }
+  .summary-header { background: linear-gradient(135deg,#4caf50,#81c784); padding: 50px 24px 36px; text-align: center; color: #fff; }
+  .summary-check { font-size: 72px; margin-bottom: 12px; }
+  .summary-title { font-family: 'Baloo 2', cursive; font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+  .summary-subtitle { font-size: 16px; opacity: 0.9; }
+  .summary-body { padding: 28px 22px; flex: 1; text-align: center; }
+  .new-order-btn { width: 100%; background: linear-gradient(135deg,var(--primary),#ff8a50); color: #fff; border: none; border-radius: 16px; padding: 17px; font-family: 'Baloo 2', cursive; font-size: 19px; font-weight: 800; cursor: pointer; margin-top: 24px; box-shadow: 0 6px 20px rgba(255,87,34,0.25); }
+
+  .fab { position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg,var(--primary),#ff8a50); color: #fff; border: none; border-radius: 50px; padding: 14px 22px; font-family: 'Baloo 2', cursive; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 6px 24px rgba(255,87,34,0.4); z-index: 150; transition: all .2s; transform: scale(0); }
+  .fab.visible { transform: scale(1); }
+  .fab:active { transform: scale(0.95); }
+
+  .sending-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  .sending-overlay.show { display: flex; }
+  .sending-spinner { width: 56px; height: 56px; border: 5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+  .sending-text { color: #fff; font-family: 'Baloo 2', cursive; font-size: 20px; font-weight: 800; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🍬 Kiosco <span>de Rosi</span></div>
+  <button class="cart-btn" onclick="toggleCart()">
+    🛒 Mi pedido <span class="cart-count" id="cartCount">0</span>
+  </button>
+</header>
+
+<div class="categories" id="categories"></div>
+<div class="menu-section">
+  <div class="section-title" id="sectionTitle"></div>
+  <div id="productsGrid"></div>
+</div>
+
+<button class="fab" id="fab" onclick="toggleCart()">🛒 Ver pedido · <span id="fabTotal">$0</span></button>
+
+<div class="overlay" id="overlay" onclick="toggleCart()"></div>
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-handle"></div>
+  <div class="cart-header">
+    <div class="cart-title">🛒 Mi Pedido</div>
+    <button class="close-btn" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="total-row">
+      <span class="total-label">Total</span>
+      <span class="total-amount" id="cartTotal">$0</span>
+    </div>
+    <button class="checkout-btn" id="checkoutBtn" onclick="checkout()" disabled>✅ Confirmar pedido</button>
+  </div>
+</div>
+
+<div class="summary-screen" id="summaryScreen">
+  <div class="summary-header">
+    <div class="summary-check">✅</div>
+    <div class="summary-title">¡Pedido enviado!</div>
+    <div class="summary-subtitle">El cajero ya recibió tu pedido 🎉</div>
+  </div>
+  <div class="summary-body">
+    <div style="font-size:60px;margin-bottom:16px;">⏳</div>
+    <div style="font-family:'Baloo 2',cursive;font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:10px;">Esperá en caja</div>
+    <div style="font-size:15px;color:#888;line-height:1.6;">Tu pedido llegó a la pantalla del mostrador.<br>Acercate a pagar y retirar tus golosinas 🍬</div>
+    <button class="new-order-btn" onclick="newOrder()">🔄 Nuevo pedido</button>
+  </div>
+</div>
+
+<div class="sending-overlay" id="sendingOverlay">
+  <div class="sending-spinner"></div>
+  <div class="sending-text">Enviando pedido...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const app = initializeApp({ databaseURL: "https://kiosco-de-rosi-default-rtdb.firebaseio.com" });
+const db = getDatabase(app);
+
+let categories = {}, products = {}, cart = {}, currentCat = null;
+
+const fmt = n => '$' + Number(n).toLocaleString('es-AR');
+
+// ── LOAD DATA ──
+onValue(ref(db,'categorias'), snap => {
+  categories = snap.val() || {};
+  renderCategories();
+});
+
+onValue(ref(db,'productos'), snap => {
+  products = snap.val() || {};
+  if (currentCat) renderProducts();
+});
+
+function renderCategories() {
+  const entries = Object.entries(categories);
+  const el = document.getElementById('categories');
+  if (!entries.length) { el.innerHTML = ''; return; }
+  if (!currentCat || !categories[currentCat]) currentCat = entries[0][0];
+  el.innerHTML = entries.map(([k,c]) =>
+    `<button class="cat-btn ${k===currentCat?'active':''}" onclick="selectCat('${k}')">
+      ${c.emoji||'📦'} ${c.name}
+    </button>`).join('');
+  renderProducts();
+}
+
+window.selectCat = function(k) {
+  currentCat = k;
+  renderCategories();
+};
+
+function renderProducts() {
+  const cat = categories[currentCat];
+  document.getElementById('sectionTitle').textContent = (cat?.emoji||'') + ' ' + (cat?.name||'');
+  const grid = document.getElementById('productsGrid');
+  const prods = Object.entries(products).filter(([,p])=>p.catId===currentCat);
+
+  if (!cat) { grid.innerHTML = ''; return; }
+  if (!prods.length) {
+    grid.innerHTML = `<div class="empty-menu">No hay productos en esta categoría aún</div>`;
+    return;
+  }
+
+  grid.className = 'products-grid';
+  grid.innerHTML = prods.map(([k,p]) => {
+    const qty = cart[k]?.qty || 0;
+    const imgEl = p.imgBase64
+      ? `<img src="${p.imgBase64}" alt="${p.name}">`
+      : `<span class="emoji-fallback">${p.emoji||'🍬'}</span>`;
+    return `<div class="product-card ${qty>0?'in-cart':''}" onclick="addToCart('${k}')">
+      <div class="product-img">${imgEl}</div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-price">${fmt(p.price)}</div>
+      </div>
+      <button class="add-btn">+</button>
+      ${qty>0?`<div class="qty-badge">${qty}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+window.addToCart = function(k) {
+  const prod = products[k]; if (!prod) return;
+  if (!cart[k]) cart[k] = { ...prod, id: k, qty: 0 };
+  cart[k].qty++;
+  renderProducts(); updateCartUI(); updateFab();
+};
+
+window.changeQty = function(k, delta) {
+  if (!cart[k]) return;
+  cart[k].qty += delta;
+  if (cart[k].qty <= 0) delete cart[k];
+  renderProducts(); updateCartUI(); updateFab();
+};
+
+function updateCartUI() {
+  const items = Object.values(cart);
+  const total = items.reduce((s,i)=>s+i.price*i.qty,0);
+  const count = items.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('cartCount').textContent = count;
+  document.getElementById('cartTotal').textContent = fmt(total);
+  document.getElementById('checkoutBtn').disabled = !items.length;
+  const el = document.getElementById('cartItems');
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-cart"><div class="empty-emoji">🛒</div><p>Tu carrito está vacío</p></div>`;
+    return;
+  }
+  el.innerHTML = items.map(item => {
+    const imgEl = item.imgBase64
+      ? `<div class="cart-item-thumb"><img src="${item.imgBase64}" alt="${item.name}"></div>`
+      : `<div class="cart-item-thumb">${item.emoji||'🍬'}</div>`;
+    return `<div class="cart-item">
+      ${imgEl}
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-price">${fmt(item.price)} c/u</div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateFab() {
+  const items = Object.values(cart);
+  const total = items.reduce((s,i)=>s+i.price*i.qty,0);
+  const count = items.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('fabTotal').textContent = fmt(total);
+  document.getElementById('fab').classList.toggle('visible', count>0);
+}
+
+window.toggleCart = function() {
+  updateCartUI();
+  document.getElementById('cartPanel').classList.toggle('show');
+  document.getElementById('overlay').classList.toggle('show');
+};
+
+window.checkout = async function() {
+  const items = Object.values(cart).map(i=>({
+    id: i.id, name: i.name, emoji: i.emoji||'🍬',
+    imgBase64: i.imgBase64||null,
+    price: i.price, qty: i.qty, subtotal: i.price*i.qty
+  }));
+  const total = items.reduce((s,i)=>s+i.subtotal,0);
+  document.getElementById('cartPanel').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('sendingOverlay').classList.add('show');
+  try {
+    await push(ref(db,'pedidos'), { items, total, timestamp: Date.now(), estado: 'nuevo' });
+    document.getElementById('sendingOverlay').classList.remove('show');
+    document.getElementById('summaryScreen').classList.add('show');
+  } catch(e) {
+    document.getElementById('sendingOverlay').classList.remove('show');
+    alert('❌ Error al enviar. Verificá la conexión.');
+  }
+};
+
+window.newOrder = function() {
+  cart = {};
+  document.getElementById('summaryScreen').classList.remove('show');
+  updateCartUI(); updateFab(); renderProducts();
+};
+</script>
+</body>
+</html>
